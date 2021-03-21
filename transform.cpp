@@ -274,7 +274,6 @@ int dgc_transform_read(dgc_transform_t t, const char *filename)
                 dgc_transform_rotate_z(t, arg);
             }
             else if(strncasecmp(line, "t ", 2) == 0) {
-                char *a = strdup("test");
                 x = strtod(mark, &mark);
                 y = strtod(mark, &mark);
                 z = strtod(mark, &mark);

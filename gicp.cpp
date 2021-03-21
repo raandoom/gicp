@@ -241,7 +241,7 @@ void GICPPointSet::ComputeMatrices() {
     if(gsl_singulars != NULL) {
         gsl_vector_free(gsl_singulars);
     }
-    query_point;
+    annDeallocPt(query_point);
 }
 
 int GICPPointSet::AlignScan(GICPPointSet *scan, dgc_transform_t base_t, dgc_transform_t t, double max_match_dist, bool save_error_plot)
