@@ -67,8 +67,8 @@ double GICPOptimizer::f(const gsl_vector *x, void *params) {
     double temp_double = 0;
     int N = opt_data->p1->Size();
     for(int i = 0; i < N; i++) {
-        int j = opt_data->nn_indecies[i];
-        if(j != -1) {
+        int j = opt_data->nn_indecies[0][i];
+        if(j != static_cast<size_t>(-1)) {
             // get point 1
             pt1[0] = (*opt_data->p1)[i].x;
             pt1[1] = (*opt_data->p1)[i].y;
@@ -134,8 +134,8 @@ void GICPOptimizer::df(const gsl_vector *x, void *params, gsl_vector *g) {
     gsl_matrix_set_zero(&gsl_temp_mat_r.matrix);
 
     for(int i = 0; i < opt_data->p1->Size(); i++) {
-        int j = opt_data->nn_indecies[i];
-        if(j != -1) {
+        int j = opt_data->nn_indecies[0][i];
+        if(j != static_cast<size_t>(-1)) {
             // get point 1
             pt1[0] = (*opt_data->p1)[i].x;
             pt1[1] = (*opt_data->p1)[i].y;
@@ -216,8 +216,8 @@ void GICPOptimizer::fdf(const gsl_vector *x, void *params, double * f, gsl_vecto
     gsl_matrix_set_zero(&gsl_temp_mat_r.matrix);
 
     for(int i = 0; i < opt_data->p1->Size(); i++) {
-        int j = opt_data->nn_indecies[i];
-        if(j != -1) {
+        int j = opt_data->nn_indecies[0][i];
+        if(j != static_cast<size_t>(-1)) {
             // get point 1
             pt1[0] = (*opt_data->p1)[i].x;
             pt1[1] = (*opt_data->p1)[i].y;

@@ -1,9 +1,9 @@
 LFLAGS += `pkg-config --libs gsl`
 CXXFLAGS += `pkg-config --cflags gsl`
 
-LFLAGS += -L. -lgicp -Lann_1.1.1/lib -lANN -lgsl -lgslcblas \
+LFLAGS += -L. -lgicp -lflann -lgsl -lgslcblas \
 	  -lboost_program_options -lboost_system -lstdc++ 
-CXXFLAGS += -O3 -I./ann_1.1.1/include/ANN
+CXXFLAGS += -O3
 
 LINK = g++
 CXX = g++

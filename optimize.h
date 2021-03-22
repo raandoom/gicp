@@ -38,7 +38,7 @@
 #ifndef OPTIMIZE_H_
 #define OPTIMIZE_H_
 
-#include <ANN.h>
+#include <flann/flann.h>
 #include "gicp.h"
 #include <vector>
 #include <gsl/gsl_linalg.h>
@@ -62,7 +62,7 @@ inline void print_gsl_matrix(gsl_matrix *mat, const char * name) {
 struct GICPOptData {
     GICPPointSet *p1;
     GICPPointSet *p2;
-    ANNidx *nn_indecies; // nearest point indecies
+    flann::Matrix<size_t> nn_indecies; // nearest point indecies
     gicp_mat_t *M;      // mahalanobis matrices for each pair
     dgc_transform_t base_t;
     int num_matches;

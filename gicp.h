@@ -39,7 +39,7 @@
 #ifndef GICP_H_
 #define GICP_H_
 
-#include <ANN.h>
+#include <flann/flann.hpp>
 #include <vector>
 #include <iostream>
 //#include <gsl/gsl.h>
@@ -86,8 +86,8 @@ public:
 
 private:
     std::vector <GICPPoint> point_;
-    ANNpointArray kdtree_points_;
-    ANNkd_tree *kdtree_;
+    flann::Matrix<double> kdtree_points_;
+    flann::KDTreeSingleIndex<flann::L2<double>>* kdtree_;
     int max_iteration_;
     int max_iteration_inner_;
     double epsilon_;

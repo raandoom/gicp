@@ -54,7 +54,6 @@ namespace gicp {
 
 GICPPointSet::GICPPointSet()
 {
-    kdtree_points_ = NULL;
     kdtree_ = NULL;
     max_iteration_ = 200; // default value
     max_iteration_inner_ = 20; // default value for inner loop
@@ -73,8 +72,8 @@ GICPPointSet::~GICPPointSet()
 {
     if (kdtree_ != NULL)
         delete kdtree_;
-    if (kdtree_points_ != NULL)
-        annDeallocPts(kdtree_points_);
+    if (kdtree_points_.ptr() != NULL)
+        delete kdtree_points_.ptr();
 }
 
 void GICPPointSet::Clear(void) {
@@ -85,9 +84,9 @@ void GICPPointSet::Clear(void) {
         delete kdtree_;
         kdtree_ = NULL;
     }
-    if (kdtree_points_ != NULL) {
-        annDeallocPts(kdtree_points_);
-        kdtree_points_ = NULL;
+    if (kdtree_points_.ptr() != NULL) {
+        delete kdtree_points_.ptr();
+        kdtree_points_ = flann::Matrix<double>(nullptr,0,0);
     }
     point_.clear();
     pthread_mutex_unlock(&mutex_);
@@ -109,13 +108,14 @@ void GICPPointSet::BuildKDTree(void)
         return;
     }
 
-    kdtree_points_ = annAllocPts(n, 3);
+    kdtree_points_ = flann::Matrix<double>(new double[n*3], n, 3);
     for(i = 0; i < n; i++) {
         kdtree_points_[i][0] = point_[i].x;
         kdtree_points_[i][1] = point_[i].y;
         kdtree_points_[i][2] = point_[i].z;
     }
-    kdtree_ = new ANNkd_tree(kdtree_points_, n, 3, 10);
+    kdtree_ = new flann::KDTreeSingleIndex<flann::L2<double>>(kdtree_points_);
+    kdtree_->buildIndex();
 }
 
 void GICPPointSet::ComputeMatrices() {
@@ -133,14 +133,14 @@ void GICPPointSet::ComputeMatrices() {
     int K = 20; // number of closest points to use for local covariance estimate
     double mean[3];
 
-    ANNpoint query_point = annAllocPt(3);
+    flann::Matrix<double> query_point(new double[3], 1, 3);
 
-    ANNdist *nn_dist_sq = new ANNdist[K];
-    if(nn_dist_sq == NULL) {
+    flann::Matrix<double> nn_dist_sq(new double[K], 1, K);
+    if(nn_dist_sq.ptr() == NULL) {
         //TODO: handle this
     }
-    ANNidx *nn_indecies = new ANNidx[K];
-    if(nn_indecies == NULL) {
+    flann::Matrix<size_t> nn_indecies(new size_t[K], 1, K);
+    if(nn_indecies.ptr() == NULL) {
         //TODO: handle this
     }
     gsl_vector *work = gsl_vector_alloc(3);
@@ -157,9 +157,9 @@ void GICPPointSet::ComputeMatrices() {
     }
 
     for(int i = 0; i < N; i++) {
-        query_point[0] = point_[i].x;
-        query_point[1] = point_[i].y;
-        query_point[2] = point_[i].z;
+        query_point[0][0] = point_[i].x;
+        query_point[0][1] = point_[i].y;
+        query_point[0][2] = point_[i].z;
 
         gicp_mat_t &cov = point_[i].C;
         // zero out the cov and mean
@@ -170,11 +170,11 @@ void GICPPointSet::ComputeMatrices() {
             }
         }
 
-        kdtree_->annkSearch(query_point, K, nn_indecies, nn_dist_sq, 0.0);
+        kdtree_->knnSearch(query_point, nn_indecies, nn_dist_sq, K, flann::SearchParams());
 
         // find the covariance matrix
         for(int j = 0; j < K; j++) {
-            GICPPoint &pt = point_[nn_indecies[j]];
+            GICPPoint &pt = point_[nn_indecies[0][j]];
 
             mean[0] += pt.x;
             mean[1] += pt.y;
@@ -226,11 +226,11 @@ void GICPPointSet::ComputeMatrices() {
         }
     }
 
-    if(nn_dist_sq != NULL) {
-        delete [] nn_dist_sq;
+    if(nn_dist_sq.ptr() != NULL) {
+        delete [] nn_dist_sq.ptr();
     }
-    if(nn_indecies != NULL) {
-        delete [] nn_indecies;
+    if(nn_indecies.ptr() != NULL) {
+        delete [] nn_indecies.ptr();
     }
     if(work != NULL) {
         gsl_vector_free(work);
@@ -241,7 +241,9 @@ void GICPPointSet::ComputeMatrices() {
     if(gsl_singulars != NULL) {
         gsl_vector_free(gsl_singulars);
     }
-    annDeallocPt(query_point);
+    if(query_point.ptr() != NULL) {
+        delete [] query_point.ptr();
+    }
 }
 
 int GICPPointSet::AlignScan(GICPPointSet *scan, dgc_transform_t base_t, dgc_transform_t t, double max_match_dist, bool save_error_plot)
@@ -252,11 +254,11 @@ int GICPPointSet::AlignScan(GICPPointSet *scan, dgc_transform_t base_t, dgc_tran
     double delta = 0.;
     dgc_transform_t t_last;
     ofstream fout_corresp;
-    ANNdist nn_dist_sq;
-    ANNidx *nn_indecies = new ANNidx[n];
-    ANNpoint query_point = annAllocPt(3);
+    flann::Matrix<double> nn_dist_sq(new double[1], 1, 1);
+    flann::Matrix<size_t> nn_indecies(new size_t[n], 1, n);
+    flann::Matrix<double> query_point(new double[3], 1, 3);
 
-    if(nn_indecies == NULL) {
+    if(nn_indecies.ptr() == NULL) {
         //TODO: fail here
     }
 
@@ -321,25 +323,26 @@ int GICPPointSet::AlignScan(GICPPointSet *scan, dgc_transform_t base_t, dgc_tran
         /* find correpondences */
         num_matches = 0;
         for (int i = 0; i < n; i++) {
-            query_point[0] = scan->point_[i].x;
-            query_point[1] = scan->point_[i].y;
-            query_point[2] = scan->point_[i].z;
+            query_point[0][0] = scan->point_[i].x;
+            query_point[0][1] = scan->point_[i].y;
+            query_point[0][2] = scan->point_[i].z;
 
-            dgc_transform_point(&query_point[0], &query_point[1],
-                    &query_point[2], base_t);
-            dgc_transform_point(&query_point[0], &query_point[1],
-                    &query_point[2], t);
+            dgc_transform_point(&query_point[0][0], &query_point[0][1],
+                    &query_point[0][2], base_t);
+            dgc_transform_point(&query_point[0][0], &query_point[0][1],
+                    &query_point[0][2], t);
 
-            kdtree_->annkSearch(query_point, 1, &nn_indecies[i], &nn_dist_sq, 0.0);
+            flann::Matrix<size_t> indice(nn_indecies.ptr() + i,1,1);
+            kdtree_->knnSearch(query_point, indice, nn_dist_sq, 1, flann::SearchParams());
 
-            if (nn_dist_sq < max_d_sq) {
+            if (nn_dist_sq[0][0] < max_d_sq) {
                 if(debug_) {
-                    fout_corresp << i << "\t" << nn_indecies[i] << endl;
+                    fout_corresp << i << "\t" << nn_indecies[0][i] << endl;
                 }
 
                 // set up the updated mahalanobis matrix here
                 gsl_matrix_view C1 = gsl_matrix_view_array(&scan->point_[i].C[0][0], 3, 3);
-                gsl_matrix_view C2 = gsl_matrix_view_array(&point_[nn_indecies[i]].C[0][0], 3, 3);
+                gsl_matrix_view C2 = gsl_matrix_view_array(&point_[nn_indecies[0][i]].C[0][0], 3, 3);
                 gsl_matrix_view M = gsl_matrix_view_array(&mahalanobis[i][0][0], 3, 3);
                 gsl_matrix_set_zero(&M.matrix);
                 gsl_matrix_set_zero(gsl_temp);
@@ -365,7 +368,7 @@ int GICPPointSet::AlignScan(GICPPointSet *scan, dgc_transform_t base_t, dgc_tran
                 num_matches++;
             }
             else {
-                nn_indecies[i] = -1; // no match
+                nn_indecies[0][i] = static_cast<size_t>(-1); // no match
             }
         }
 
@@ -436,8 +439,11 @@ int GICPPointSet::AlignScan(GICPPointSet *scan, dgc_transform_t base_t, dgc_tran
             opt.PlotError(t, opt_data, "error_func");
         }
     }
-    if(nn_indecies != NULL) {
-        delete [] nn_indecies;
+    if(nn_indecies.ptr() != NULL) {
+        delete [] nn_indecies.ptr();
+    }
+    if(nn_dist_sq.ptr() != NULL) {
+        delete [] nn_dist_sq.ptr();
     }
     if(mahalanobis != NULL) {
         delete [] mahalanobis;
@@ -448,7 +454,9 @@ int GICPPointSet::AlignScan(GICPPointSet *scan, dgc_transform_t base_t, dgc_tran
     if(gsl_temp != NULL) {
         gsl_matrix_free(gsl_temp);
     }
-    annDeallocPt(query_point);
+    if(query_point.ptr() != NULL) {
+        delete [] query_point.ptr();
+    }
 
     return iteration;
 }

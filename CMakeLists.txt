@@ -28,21 +28,15 @@ add_executable(test_gicp    test_gicp.cpp
                             ${GICP_HEADERS}
                             )
 
-target_include_directories(gicp PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/ann_1.1.1/include/ANN)
-target_include_directories(test_gicp PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/ann_1.1.1/include/ANN)
-
-target_link_directories(gicp PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/ann_1.1.1/lib)
-target_link_directories(test_gicp PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/ann_1.1.1/lib)
-
-target_link_libraries(gicp      ANN.a
-                                gsl
+target_link_libraries(gicp      gsl
                                 gslcblas
+                                lz4
                                 )
 
-target_link_libraries(test_gicp ANN.a
-                                gsl
+target_link_libraries(test_gicp gsl
                                 gslcblas
                                 boost_program_options
+                                lz4
                                 )
 
 set(S2A_HEADERS     scan.h
