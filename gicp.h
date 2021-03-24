@@ -39,7 +39,7 @@
 #ifndef GICP_H_
 #define GICP_H_
 
-#include <ANN.h>
+#include "nanoflann.hpp"
 #include <vector>
 #include <iostream>
 //#include <gsl/gsl.h>
@@ -55,6 +55,46 @@ struct GICPPoint {
     float range;
     gicp_mat_t C; // covariance matrix
 };
+
+class ANNpointArray
+{
+    // A const reference to the data set origin
+    const std::vector<GICPPoint>& m_ref;
+
+public:
+    enum Dim { X, Y, Z, dims };
+
+    explicit ANNpointArray(const std::vector<GICPPoint>& data) :
+        m_ref(data)
+    {}
+    // Must return the number of data points
+    inline size_t kdtree_get_point_count() const {
+        return m_ref.size();
+    }
+    // Returns the dim'th component of the idx'th point in the class:
+    // Since this is inlined and the "dim" argument is typically an immediate value, the
+    inline double kdtree_get_pt(const size_t index, const size_t dim) const {
+        switch (dim) {
+        case X : return m_ref.at(index).x;
+        case Y : return m_ref.at(index).y;
+        case Z : return m_ref.at(index).z;
+        }
+        __builtin_unreachable();
+    }
+    // Optional bounding-box computation: return false to default to a standard bounding box computation loop.
+    //   Return true if the bounding box was already computed by the class and returned in "box" so it can be avoided to redo it again.
+    //   Look at box.size() to find out the expected dimensionality (e.g. 2 or 3 for point clouds)
+    template <typename T>
+    bool kdtree_get_bbox(T&) const {
+        return false;
+    }
+};
+
+typedef nanoflann::KDTreeSingleIndexAdaptor<
+        nanoflann::L2_Simple_Adaptor<double,ANNpointArray>,
+        ANNpointArray,
+        ANNpointArray::dims
+        > ANNkd_tree;
 
 class GICPPointSet {
 public:
@@ -86,7 +126,7 @@ public:
 
 private:
     std::vector <GICPPoint> point_;
-    ANNpointArray kdtree_points_;
+    ANNpointArray *kdtree_points_;
     ANNkd_tree *kdtree_;
     int max_iteration_;
     int max_iteration_inner_;
