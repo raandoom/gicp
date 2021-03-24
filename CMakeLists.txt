@@ -36,6 +36,7 @@ target_link_libraries(gicp      gsl
 target_link_libraries(test_gicp gsl
                                 gslcblas
                                 boost_program_options
+                                boost_system
                                 lz4
                                 )
 
@@ -53,4 +54,6 @@ add_executable(scan2ascii   ${S2A_SOURCES}
                             ${S2A_HEADERS}
                             )
 
-target_link_libraries(scan2ascii boost_program_options)
+target_link_libraries(scan2ascii    boost_program_options
+                                    boost_system
+                                    )
