@@ -160,7 +160,7 @@ void GICPPointSet::ComputeMatrices() {
             }
         }
 
-        kdtree_->knnSearch(query_point.data(), K, nn_indecies.data(), nn_dist_sq.data(), 0);
+        kdtree_->knnSearch(query_point.data(), K, nn_indecies.data(), nn_dist_sq.data());
 
         // find the covariance matrix
         for(int j = 0; j < K; j++) {
@@ -309,7 +309,7 @@ int GICPPointSet::AlignScan(GICPPointSet *scan, dgc_transform_t base_t, dgc_tran
             dgc_transform_point(&query_point[0], &query_point[1],
                     &query_point[2], t);
 
-            kdtree_->knnSearch(query_point.data(), 1, &nn_indecies[i], &nn_dist_sq, 0);
+            kdtree_->knnSearch(query_point.data(), 1, &nn_indecies[i], &nn_dist_sq);
 
             if (nn_dist_sq < max_d_sq) {
                 if(debug_) {
