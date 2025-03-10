@@ -93,7 +93,8 @@ public:
 typedef nanoflann::KDTreeSingleIndexAdaptor<
         nanoflann::L2_Simple_Adaptor<double,ANNpointArray>,
         ANNpointArray,
-        ANNpointArray::dims
+        ANNpointArray::dims,
+        size_t
         > ANNkd_tree;
 
 class GICPPointSet {
